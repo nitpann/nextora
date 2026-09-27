@@ -1,0 +1,178 @@
+// Prisma schema for Nextora - AI Career Consultant
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  role          String         @default("USER") // USER, ADMIN
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  assessments   Assessment[]
+  payments      Payment[]
+  roadmaps      CareerRoadmap[]
+  conversations Conversation[]
+}
+
+model Assessment {
+  id                      String         @id @default(cuid())
+  userId                  String
+  user                    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                  String         @default("DRAFT") // DRAFT, COMPLETED, PAID
+  
+  // Step 1: Objective
+  primaryObjective        String?        // Career Growth, Industry Switch, Department/Role Switch, Learn a New Skill, Start a Side Career/Business, Undecided
+
+  // Step 2: Professional Profile
+  currentRole             String?
+  currentTitle            String?
+  department              String?
+  industry                String?
+  experienceYears         Int?           @default(0)
+  responsibilities        String?
+  incomeRange             String?
+  employmentType          String?
+  existingSkills          String?        // JSON Array string
+  toolsUsed               String?        // JSON Array string
+
+  // Step 3: Education Profile
+  highestQualification    String?
+  degree                  String?
+  specialization          String?
+  collegeUniversity       String?
+  graduationYear          Int?
+  certifications          String?        // JSON Array string
+  additionalCourses       String?
+
+  // Step 4: Career Goal
+  desiredCareer           String?
+  desiredJobTitle         String?
+  desiredIndustry         String?
+  desiredDepartment       String?
+  desiredSalary           String?
+  shortTermGoal           String?
+  longTermGoal            String?
+  desiredLocation         String?
+  workPreferenceRemote    String?        // Remote, Hybrid, On-site, Any
+  willingnessToRelocate   Boolean        @default(false)
+  desiredTimeline         String?
+  isUndecided             Boolean        @default(false)
+
+  // Step 5: Interests & Work Style
+  interestAreas           String?        // JSON Array string
+  workPreferences         String?        // JSON Array string
+  riskTolerance           String?        // Low, Moderate, High
+  learningPreference      String?        // Self-paced, Cohort, Hands-on, Mentorship
+  problemSolvingPreference String?
+
+  // Step 6: Time Availability
+  weeklyHours             String?        // Less than 3 hours, 3-5 hours, 5-10 hours, 10-15 hours, 15+ hours
+
+  // Step 7: Budget
+  budgetRange             String?        // Free, Under 5000, 5000-20000, 20000-50000, 50000+, Flexible
+
+  // Step 8: Constraints
+  constraints             String?        // JSON Array string (family, full-time study, urgency, financial)
+  
+  // Payment status
+  isPaid                  Boolean        @default(false)
+  paidAt                  DateTime?
+
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+
+  roadmaps                CareerRoadmap[]
+  payments                Payment[]
+  conversations           Conversation[]
+}
+
+model Payment {
+  id                String       @id @default(cuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessmentId      String
+  assessment        Assessment   @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  
+  amount            Int          @default(4900) // ₹49.00 in paise
+  currency          String       @default("INR")
+  status            String       @default("PENDING") // PENDING, SUCCESS, FAILED
+  
+  razorpayOrderId   String?      @unique
+  razorpayPaymentId String?      @unique
+  razorpaySignature String?
+  receipt           String?
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model CareerRoadmap {
+  id                      String       @id @default(cuid())
+  userId                  String
+  user                    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessmentId            String
+  assessment              Assessment   @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  
+  profileSummary          String
+  currentPosition         String
+  targetPosition          String
+  careerTransitionType    String
+  overallAssessment       String
+  
+  primaryPathJson         String       // JSON string of primary path
+  alternativePathsJson    String       // JSON Array string
+  transferableSkillsJson  String       // JSON Array string
+  skillGapAnalysisJson    String       // JSON Array string
+  roadmapPhasesJson       String       // JSON Array string
+  timelineJson            String       // JSON string
+  learningResourcesJson   String       // JSON Array string
+  certificationsJson      String       // JSON Array string
+  educationOptionsJson    String       // JSON Array string
+  entranceExamsJson       String       // JSON Array string
+  portfolioProjectsJson   String       // JSON Array string
+  jobPreparationJson      String       // JSON Array string
+  estimatedBudgetJson     String       // JSON string
+  nextStepsJson           String       // JSON Array string
+  risksAndConstraintsJson String       // JSON Array string
+  consultantNotes         String
+  
+  progressJson            String?      // JSON string of completed tasks { [taskId]: 'COMPLETED' | 'IN_PROGRESS' }
+  overallProgressPercent  Int          @default(0)
+  
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+}
+
+model Conversation {
+  id           String                @id @default(cuid())
+  userId       String
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessmentId String?
+  assessment   Assessment?           @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+  title        String                @default("Career Consultation")
+  
+  messages     ConversationMessage[]
+  
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+}
+
+model ConversationMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String       // user, assistant, system
+  content        String
+  
+  createdAt      DateTime     @default(now())
+}
